@@ -1214,9 +1214,9 @@ Use \\[so-long-customize] to configure the behaviour."
              (or (so-long-original 'major-mode) "<unknown>")
              (substitute-command-keys "\\[so-long-revert]"))))
 
-(defun so-long-change-major-mode ()
+(defun so-long--change-major-mode ()
   ;; Advice, enabled with:
-  ;; (advice-add 'so-long-mode :before #'so-long-change-major-mode)
+  ;; (advice-add 'so-long-mode :before #'so-long--change-major-mode)
   ;;
   ;; n.b. `major-mode-suspend' and `major-mode-restore' are new in Emacs 27, and
   ;; related to what we're doing here; but it's not worth going to the effort of
@@ -1233,7 +1233,7 @@ This advice acts before `so-long-mode', with the previous mode still active."
     ;; Remember the original major mode, regardless.
     (so-long-remember 'major-mode)))
 
-(advice-add 'so-long-mode :before #'so-long-change-major-mode)
+(advice-add 'so-long-mode :before #'so-long--change-major-mode)
 
 (defun so-long-after-change-major-mode ()
   "Run by `so-long-mode' in `after-change-major-mode-hook'.
