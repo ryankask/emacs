@@ -492,9 +492,8 @@ files would prevent Emacs from handling them correctly."
 
 Only called if the major mode is a member of `so-long-target-modes'.
 
-If the function returns non-nil, `so-long' will be invoked.
-
-The specified function will be called with no arguments.
+The specified function will be called with no arguments.  If it returns non-nil
+then `so-long' will be invoked.
 
 Defaults to `so-long-detected-long-line-p'."
   :type '(choice (const so-long-detected-long-line-p)
