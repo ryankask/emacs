@@ -228,6 +228,102 @@ Return the number of minutes."
               end (encode-time (iso8601-parse (cadr bits)))))))
     (list start end)))
 
+
+;; (format-time-string "%FT%T" (iso8601-parse-date "1985"))
+;; "1985-01-01T00:00:00"
+
+;; (format-time-string "%FT%T" (iso8601-parse-date "-0003"))
+;; "0002-01-01T00:00:00"
+
+;; (format-time-string "%FT%T" (iso8601-parse-date "+1985"))
+;; "1985-01-01T00:00:00"
+
+;; (format-time-string "%FT%T" (iso8601-parse-date "1985-03-14"))
+;; "1985-03-14T00:00:00"
+
+;; (format-time-string "%FT%T" (iso8601-parse-date "19850314"))
+;; "1985-03-14T00:00:00"
+
+;; (format-time-string "%FT%T" (iso8601-parse-date "1985-02"))
+;; "1985-02-01T00:00:00"
+
+;; (format-time-string "%FT%T" (iso8601-parse-date "--02-01"))
+;; "0000-02-01T00:00:00"
+
+;; (format-time-string "%FT%T" (iso8601-parse-date "--0201"))
+;; "0000-02-01T00:00:00"
+
+;; (iso8601-days-in-year 1999)
+;; 365
+
+;; (iso8601-days-in-year 1900)
+;; 366
+
+;; (iso8601-days-in-year 1996)
+;; 366
+
+;; (iso8601-days-in-year 2000)
+;; 365
+
+;; (iso8601-days-in-month 2001 5)
+;; 31
+
+;; (iso8601-days-in-month 2004 2)
+;; 29
+
+;; (iso8601-days-in-month 2001 11)
+;; 30
+
+;; (iso8601-ordinal-to-date 2008 271)
+;; (9 . 27)
+
+;; (iso8601-ordinal-to-date 2008 1)
+;; (1 . 1)
+
+;; (iso8601-ordinal-to-date 2008 32)
+;; (2 . 1)
+
+;; (iso8601-ordinal-to-date 1981 095)
+;; (4 . 5)
+
+;; (format-time-string "%FT%T" (iso8601-parse-date "2008W39-6"))
+;; "2008-09-27T01:00:00"
+
+;; (format-time-string "%FT%T" (iso8601-parse-date "2009W01-1"))
+;; "2008-12-29T00:00:00"
+
+;; (format-time-string "%FT%T" (iso8601-parse-date "2009W53-7"))
+;; "2010-01-03T00:00:00"
+
+;; (format-time-string "%FT%T" (iso8601-parse-date "1981-095"))
+;; "1981-04-05T01:00:00"
+
+;; (format-time-string "%G-W%V-%u" (encode-time '(0 0 0 29 12 2008 nil nil nil)))
+;; "2009-W01-1"
+
+;; (format-time-string "%FT%T" (iso8601-parse-date "2009W01-1"))
+;; "2009-01-05T00:00:00"
+
+;; (format-time-string "%FT%T" (encode-time (iso8601-parse-time "13:47:30")))
+;; "0000-01-01T13:47:30"
+
+;; (format-time-string "%FT%T" (encode-time (iso8601-parse "2008-03-02T13:47:30")))
+;; "2008-03-02T13:47:30"
+
+
+;; (iso8601-parse-duration "P3Y6M4DT12H30M5S")
+;; (5 30 12 4 6 3 nil nil nil)
+
+;; (iso8601-parse-duration "P1M")
+;; (0 0 0 0 1 0 nil nil nil)
+
+;; (iso8601-parse-duration "PT1M")
+;; (0 1 0 0 0 0 nil nil nil)
+
+;; (iso8601-parse-duration "P0003-06-04T12:30:05")
+(5 30 12 4 6 3 nil nil nil)
+
+
 (provide 'iso8601)
 
 ;;; iso8601.el ends here
