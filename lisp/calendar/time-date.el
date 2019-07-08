@@ -349,6 +349,26 @@ is output until the first non-zero unit is encountered."
                          (<= (car here) delay)))
              (concat (format "%.2f" (/ delay (car (cddr here)))) (cadr here))))))
 
+(defun date-days-in-month (year month)
+  "The number of days in MONTH in YEAR."
+  (if (= month 2)
+      (if (date-leap-year-p year)
+          29
+        28)
+    (if (memq month '(1 3 5 7 8 10 12))
+        31
+      30)))
+
+(defun time-ordinal-to-date (year ordinal)
+  "Convert a YEAR/ORDINAL to the equivalent `decoded-time' structure.
+ORDINAL is the number of days since the start of the year, with
+January 1st being 1."
+  (let ((month 1))
+    (while (> ordinal (date-days-in-month year month))
+      (setq ordinal (- ordinal (date-days-in-month year month))
+            month (1+ month)))
+    (list 0 0 0 ordinal month year nil nil nil)))
+
 (provide 'time-date)
 
 ;;; time-date.el ends here

@@ -87,12 +87,12 @@
        ;; Monday 29 December 2008 is written "2009-W01-1".
        ((< ordinal 1)
         (setq year (1- year)
-              ordinal (+ ordinal (iso8601-days-in-year year))))
+              ordinal (+ ordinal (time-days-in-year year))))
        ;; Sunday 3 January 2010 is written "2009-W53-7".
        ((> ordinal (iso8601-days-in-year year))
-        (setq ordinal (- ordinal (iso8601-days-in-year year))
+        (setq ordinal (- ordinal (time-days-in-year year))
               year (1+ year))))
-      (let ((month-day (iso8601-ordinal-to-date year ordinal)))
+      (let ((month-day (time-ordinal-to-date year ordinal)))
         (make-decoded-time :year year
                            :month (car month-day)
                            :day (cdr month-day)))))
@@ -157,30 +157,6 @@ Return the number of minutes."
               ;; The time zone in decoded times are in seconds.
               (* (iso8601-parse-zone zone-string) 60)))
       date)))
-
-(defun iso8601-days-in-year (year)
-  (if (and (zerop (% year 4))
-           (if (zerop (% year 100))
-               (not (zerop (% year 400)))
-             t))
-      366
-    365))
-
-(defun iso8601-days-in-month (year month)
-  (if (= month 2)
-      (if (= (iso8601-days-in-year year) 365)
-          28
-        29)
-    (if (memq month '(1 3 5 7 8 10 12))
-        31
-     30)))
-
-(defun iso8601-ordinal-to-date (year ordinal)
-  (let ((month 1))
-    (while (> ordinal (iso8601-days-in-month year month))
-      (setq ordinal (- ordinal (iso8601-days-in-month year month))
-            month (1+ month)))
-    (cons month ordinal)))
 
 (defun iso8601-parse-duration (string)
   "Parse ISO 8601 durations on the form P3Y6M4DT12H30M5S."
@@ -253,38 +229,38 @@ Return the number of minutes."
 ;; (format-time-string "%FT%T" (iso8601-parse-date "--0201"))
 ;; "0000-02-01T00:00:00"
 
-;; (iso8601-days-in-year 1999)
+;; (time-days-in-year 1999)
 ;; 365
 
-;; (iso8601-days-in-year 1900)
+;; (time-days-in-year 1900)
 ;; 366
 
-;; (iso8601-days-in-year 1996)
+;; (time-days-in-year 1996)
 ;; 366
 
-;; (iso8601-days-in-year 2000)
+;; (time-days-in-year 2000)
 ;; 365
 
-;; (iso8601-days-in-month 2001 5)
+;; (time-days-in-month 2001 5)
 ;; 31
 
-;; (iso8601-days-in-month 2004 2)
+;; (time-days-in-month 2004 2)
 ;; 29
 
-;; (iso8601-days-in-month 2001 11)
+;; (time-days-in-month 2001 11)
 ;; 30
 
-;; (iso8601-ordinal-to-date 2008 271)
-;; (9 . 27)
+;; (time-ordinal-to-date 2008 271)
+;; (0 0 0 27 9 2008 nil nil nil)
 
-;; (iso8601-ordinal-to-date 2008 1)
-;; (1 . 1)
+;; (time-ordinal-to-date 2008 1)
+;; (0 0 0 1 1 2008 nil nil nil)
 
-;; (iso8601-ordinal-to-date 2008 32)
-;; (2 . 1)
+;; (time-ordinal-to-date 2008 32)
+;; (0 0 0 1 2 2008 nil nil nil)
 
-;; (iso8601-ordinal-to-date 1981 095)
-;; (4 . 5)
+;; (time-ordinal-to-date 1981 095)
+;; (0 0 0 5 4 1981 nil nil nil)
 
 ;; (format-time-string "%FT%T" (iso8601-parse-date "2008W39-6"))
 ;; "2008-09-27T01:00:00"
