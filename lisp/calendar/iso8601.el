@@ -261,13 +261,16 @@ Return the number of minutes."
        (t
         (signal 'wrong-type-argument string))))
     (unless end
-      (setq end (decode-time (time-add (encode-time start)
-                                       (encode-time duration))
-                             (decoded-time-zone start))))
+      (setq end (decoded-time-add start duration)))
     (unless start
-      (setq start (decode-time (time-subtract (encode-time end)
-                                              (encode-time duration))
-                               (decoded-time-zone end))))
+      (setq start (decoded-time-add end
+                                    ;; We negate the duration so that
+                                    ;; we get a subtraction.
+                                    (mapcar (lambda (elem)
+                                              (if (numberp elem)
+                                                  (- elem)
+                                                elem))
+                                            duration))))
     (list start end
           (or duration
               (decode-time (time-subtract (encode-time end)

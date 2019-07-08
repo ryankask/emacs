@@ -98,16 +98,12 @@
              (0 30 15 11 5 2008 nil nil 0)
              ;; Hm...  can't really use decode-time for time differences...
              (0 30 2 14 3 1971 0 nil 0))))
-  (should
-   (equal (iso8601-parse-interval "2007-03-01T13:00:00Z/P1Y2M10DT2H30M")
-          '((0 0 13 1 3 2007 nil nil 0)
-            ;; Well, that's wrong...
-            (0 47 14 10 4 38 6 nil 0)
-            (0 30 2 10 2 1 nil nil nil))))
+  (should (equal (iso8601-parse-interval "2007-03-01T13:00:00Z/P1Y2M10DT2H30M")
+                 '((0 0 13 1 3 2007 nil nil 0)
+                   (0 30 15 11 5 2008 nil nil 0)
+                   (0 30 2 10 2 1 nil nil nil))))
   (should (equal (iso8601-parse-interval "P1Y2M10DT2H30M/2008-05-11T15:30:00Z")
-                 ;; I think I have to add decoded-time math functions,
-                 ;; really.
-                 '((0 43 13 1 4 3977 5 nil 0)
+                 '((0 0 13 1 3 2007 nil nil 0)
                    (0 30 15 11 5 2008 nil nil 0)
                    (0 30 2 10 2 1 nil nil nil)))))
 

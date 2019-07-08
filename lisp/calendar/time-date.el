@@ -386,7 +386,10 @@ decreased to be valid (\"add one month\" to January 31st will
 yield a result of February 28th (or 29th, depending on the leap
 year status).
 
-Fields are added in a most to least significant order."
+Fields are added in a most to least significant order.
+
+When changing the time bits in TIME (i.e., second/minute/hour),
+changes in daylight saving time are not taken into account."
   (let ((time (copy-sequence time))
         seconds)
     ;; Years are simple.
@@ -399,7 +402,7 @@ Fields are added in a most to least significant order."
         (setf (decoded-time-month time) (mod new 12))
         (cl-incf (decoded-time-year time) (/ new 12))))
 
-    ;; Adjust for month length.
+    ;; Adjust for month length (as described in the doc string).
     (setf (decoded-time-day time)
           (min (date-days-in-month (decoded-time-year time)
                                    (decoded-time-month time))
@@ -427,6 +430,7 @@ Fields are added in a most to least significant order."
     time))
 
 (defun decoded-time--alter-month (time increase)
+  "Increase or decrease the month in TIME by 1."
   (if increase
       (progn
         (cl-incf (decoded-time-month time))
@@ -439,6 +443,7 @@ Fields are added in a most to least significant order."
       (cl-decf (decoded-time-year time)))))
 
 (defun decoded-time--alter-day (time increase)
+  "Increase or decrease the day in TIME by 1."
   (if increase
       (progn
         (cl-incf (decoded-time-day time))
@@ -455,6 +460,7 @@ Fields are added in a most to least significant order."
                                 (decoded-time-month time))))))
 
 (defun decoded-time--alter-second (time seconds increase)
+  "Increase or decrease the time in TIME by SECONDS."
   (let ((old (+ (* (or (decoded-time-hour time) 0) 3600)
                 (* (or (decoded-time-minute time) 0) 60)
                 (or (decoded-time-second time) 0))))
