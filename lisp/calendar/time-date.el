@@ -359,7 +359,7 @@ is output until the first non-zero unit is encountered."
         31
       30)))
 
-(defun time-ordinal-to-date (year ordinal)
+(defun date-ordinal-to-time (year ordinal)
   "Convert a YEAR/ORDINAL to the equivalent `decoded-time' structure.
 ORDINAL is the number of days since the start of the year, with
 January 1st being 1."

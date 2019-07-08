@@ -25,6 +25,8 @@
 
 ;;; Code:
 
+(require 'time-date)
+
 (cl-defmethod make-decoded-time (&key second minute hour
                                       day month year
                                       dst zone)
@@ -87,24 +89,27 @@
        ;; Monday 29 December 2008 is written "2009-W01-1".
        ((< ordinal 1)
         (setq year (1- year)
-              ordinal (+ ordinal (time-days-in-year year))))
+              ordinal (+ ordinal (if (date-leap-year-p year)
+                                     366 365))))
        ;; Sunday 3 January 2010 is written "2009-W53-7".
-       ((> ordinal (iso8601-days-in-year year))
-        (setq ordinal (- ordinal (time-days-in-year year))
+       ((> ordinal (if (date-leap-year-p year)
+                       366 365))
+        (setq ordinal (- ordinal (if (date-leap-year-p year)
+                                     366 365))
               year (1+ year))))
-      (let ((month-day (time-ordinal-to-date year ordinal)))
+      (let ((month-day (date-ordinal-to-time year ordinal)))
         (make-decoded-time :year year
-                           :month (car month-day)
-                           :day (cdr month-day)))))
+                           :month (decoded-time-month month-day)
+                           :day (decoded-time-day month-day)))))
    ;; Ordinal dates: YYYY-DDD
    ((string-match "\\`\\([0-9][0-9][0-9][0-9]\\)-?\\([0-9][0-9][0-9]\\)\\'"
                   string)
     (let* ((year (string-to-number (match-string 1 string)))
            (ordinal (string-to-number (match-string 2 string)))
-           (month-day (iso8601-ordinal-to-date year ordinal)))
+           (month-day (date-ordinal-to-time year ordinal)))
       (make-decoded-time :year year
-                         :month (car month-day)
-                         :day (cdr month-day))))))
+                         :month (decoded-time-month month-day)
+                         :day (decoded-time-day month-day))))))
 
 (defun iso8601-parse-time (string)
   "Parse STRING, which should be an ISO 8601 time string, and return a time value."
@@ -203,102 +208,6 @@ Return the number of minutes."
         (setq start (encode-time (iso8601-parse (car bits)))
               end (encode-time (iso8601-parse (cadr bits)))))))
     (list start end)))
-
-
-;; (format-time-string "%FT%T" (iso8601-parse-date "1985"))
-;; "1985-01-01T00:00:00"
-
-;; (format-time-string "%FT%T" (iso8601-parse-date "-0003"))
-;; "0002-01-01T00:00:00"
-
-;; (format-time-string "%FT%T" (iso8601-parse-date "+1985"))
-;; "1985-01-01T00:00:00"
-
-;; (format-time-string "%FT%T" (iso8601-parse-date "1985-03-14"))
-;; "1985-03-14T00:00:00"
-
-;; (format-time-string "%FT%T" (iso8601-parse-date "19850314"))
-;; "1985-03-14T00:00:00"
-
-;; (format-time-string "%FT%T" (iso8601-parse-date "1985-02"))
-;; "1985-02-01T00:00:00"
-
-;; (format-time-string "%FT%T" (iso8601-parse-date "--02-01"))
-;; "0000-02-01T00:00:00"
-
-;; (format-time-string "%FT%T" (iso8601-parse-date "--0201"))
-;; "0000-02-01T00:00:00"
-
-;; (time-days-in-year 1999)
-;; 365
-
-;; (time-days-in-year 1900)
-;; 366
-
-;; (time-days-in-year 1996)
-;; 366
-
-;; (time-days-in-year 2000)
-;; 365
-
-;; (time-days-in-month 2001 5)
-;; 31
-
-;; (time-days-in-month 2004 2)
-;; 29
-
-;; (time-days-in-month 2001 11)
-;; 30
-
-;; (time-ordinal-to-date 2008 271)
-;; (0 0 0 27 9 2008 nil nil nil)
-
-;; (time-ordinal-to-date 2008 1)
-;; (0 0 0 1 1 2008 nil nil nil)
-
-;; (time-ordinal-to-date 2008 32)
-;; (0 0 0 1 2 2008 nil nil nil)
-
-;; (time-ordinal-to-date 1981 095)
-;; (0 0 0 5 4 1981 nil nil nil)
-
-;; (format-time-string "%FT%T" (iso8601-parse-date "2008W39-6"))
-;; "2008-09-27T01:00:00"
-
-;; (format-time-string "%FT%T" (iso8601-parse-date "2009W01-1"))
-;; "2008-12-29T00:00:00"
-
-;; (format-time-string "%FT%T" (iso8601-parse-date "2009W53-7"))
-;; "2010-01-03T00:00:00"
-
-;; (format-time-string "%FT%T" (iso8601-parse-date "1981-095"))
-;; "1981-04-05T01:00:00"
-
-;; (format-time-string "%G-W%V-%u" (encode-time '(0 0 0 29 12 2008 nil nil nil)))
-;; "2009-W01-1"
-
-;; (format-time-string "%FT%T" (iso8601-parse-date "2009W01-1"))
-;; "2009-01-05T00:00:00"
-
-;; (format-time-string "%FT%T" (encode-time (iso8601-parse-time "13:47:30")))
-;; "0000-01-01T13:47:30"
-
-;; (format-time-string "%FT%T" (encode-time (iso8601-parse "2008-03-02T13:47:30")))
-;; "2008-03-02T13:47:30"
-
-
-;; (iso8601-parse-duration "P3Y6M4DT12H30M5S")
-;; (5 30 12 4 6 3 nil nil nil)
-
-;; (iso8601-parse-duration "P1M")
-;; (0 0 0 0 1 0 nil nil nil)
-
-;; (iso8601-parse-duration "PT1M")
-;; (0 1 0 0 0 0 nil nil nil)
-
-;; (iso8601-parse-duration "P0003-06-04T12:30:05")
-(5 30 12 4 6 3 nil nil nil)
-
 
 (provide 'iso8601)
 
