@@ -200,15 +200,15 @@ Return the number of minutes."
 (defun iso8601-parse-duration (string)
   "Parse ISO 8601 durations on the form P3Y6M4DT12H30M5S."
   (cond
-   ((string-match "\\`P\\([0-9]+Y\\)?\\([0-9]+M\\)?\\([0-9]+D\\)?\\(T\\([0-9]+H\\)?\\([0-9]+M\\)?\\([0-9]+S\\)?\\)?\\'"
-                  string)
-    (when (> (length (match-string 0 string)) 2)
-      (iso8601--decoded-time :year (or (match-string 1 string) 0)
-                             :month (or (match-string 2 string) 0)
-                             :day (or (match-string 3 string) 0)
-                             :hour (or (match-string 5 string) 0)
-                             :minute (or (match-string 6 string) 0)
-                             :second (or (match-string 7 string) 0))))
+   ((and (string-match "\\`P\\([0-9]+Y\\)?\\([0-9]+M\\)?\\([0-9]+D\\)?\\(T\\([0-9]+H\\)?\\([0-9]+M\\)?\\([0-9]+S\\)?\\)?\\'"
+                       string)
+         (> (length (match-string 0 string)) 2))
+    (iso8601--decoded-time :year (or (match-string 1 string) 0)
+                           :month (or (match-string 2 string) 0)
+                           :day (or (match-string 3 string) 0)
+                           :hour (or (match-string 5 string) 0)
+                           :minute (or (match-string 6 string) 0)
+                           :second (or (match-string 7 string) 0)))
    ;; PnW: Weeks.
    ((string-match "\\`P\\([0-9]+\\)W\\'" string)
     (let ((weeks (string-to-number (match-string 1 string))))
