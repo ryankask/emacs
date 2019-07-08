@@ -26,7 +26,7 @@
   (should (equal (iso8601-parse-date "1985")
                  '(0 0 0 1 1 1985 nil nil nil)))
   (should (equal (iso8601-parse-date "-0003")
-                 '(0 0 0 1 1 2 nil nil nil)))
+                 '(0 0 0 1 1 -4 nil nil nil)))
   (should (equal (iso8601-parse-date "+1985")
                  '(0 0 0 1 1 1985 nil nil nil))))
 
@@ -106,5 +106,40 @@
                  '((0 0 13 1 3 2007 nil nil 0)
                    (0 30 15 11 5 2008 nil nil 0)
                    (0 30 2 10 2 1 nil nil nil)))))
+
+(ert-deftest standard-test-dates ()
+  (should (equal (iso8601-parse-date "19850412")
+                 '(0 0 0 12 4 1985 nil nil nil)))
+  (should (equal (iso8601-parse-date "1985-04-12")
+                 '(0 0 0 12 4 1985 nil nil nil)))
+
+  (should (equal (iso8601-parse-date "1985102")
+                 '(0 0 0 12 4 1985 nil nil nil)))
+  (should (equal (iso8601-parse-date "1985-102")
+                 '(0 0 0 12 4 1985 nil nil nil)))
+
+  (should (equal (iso8601-parse-date "1985W155")
+                 '(0 0 0 12 4 1985 nil nil nil)))
+  (should (equal (iso8601-parse-date "1985-W15-5")
+                 '(0 0 0 12 4 1985 nil nil nil)))
+
+  (should (equal (iso8601-parse-date "1985W15")
+                 '(0 0 0 7 4 1985 nil nil nil)))
+  (should (equal (iso8601-parse-date "1985-W15")
+                 '(0 0 0 7 4 1985 nil nil nil)))
+
+  (should (equal (iso8601-parse-date "1985-04")
+                 '(0 0 0 1 4 1985 nil nil nil)))
+
+  (should (equal (iso8601-parse-date "1985")
+                 '(0 0 0 1 1 1985 nil nil nil)))
+
+  (should (equal (iso8601-parse-date "+1985-04-12")
+                 '(0 0 0 12 4 1985 nil nil nil)))
+  (should (equal (iso8601-parse-date "+19850412")
+                 '(0 0 0 12 4 1985 nil nil nil)))
+
+  )
+
 
 ;;; iso8601-tests.el ends here

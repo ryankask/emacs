@@ -44,15 +44,15 @@
 (defconst iso8601--year-match
   "\\([-+]\\)?\\([0-9][0-9][0-9][0-9]\\)")
 (defconst iso8601--full-date-match
-  "\\([0-9][0-9][0-9][0-9]\\)-?\\([0-9][0-9]\\)-?\\([0-9][0-9]\\)")
+  "\\([-+]\\)?\\([0-9][0-9][0-9][0-9]\\)-?\\([0-9][0-9]\\)-?\\([0-9][0-9]\\)")
 (defconst iso8601--without-day-match
-  "\\([0-9][0-9][0-9][0-9]\\)-\\([0-9][0-9]\\)")
+  "\\([-+]\\)?\\([0-9][0-9][0-9][0-9]\\)-\\([0-9][0-9]\\)")
 (defconst iso8601--outdated-date-match
   "--\\([0-9][0-9]\\)-?\\([0-9][0-9]\\)")
 (defconst iso8601--week-date-match
-  "\\([0-9][0-9][0-9][0-9]\\)-?W\\([0-9][0-9]\\)-?\\([0-9]\\)?")
+  "\\([-+]\\)?\\([0-9][0-9][0-9][0-9]\\)-?W\\([0-9][0-9]\\)-?\\([0-9]\\)?")
 (defconst iso8601--ordinal-date-match
-  "\\([0-9][0-9][0-9][0-9]\\)-?\\([0-9][0-9][0-9]\\)")
+  "\\([-+]\\)?\\([0-9][0-9][0-9][0-9]\\)-?\\([0-9][0-9][0-9]\\)")
 (defconst iso8601--date-match
   (iso8601--concat-regexps
    (list iso8601--year-match
@@ -118,24 +118,22 @@ well as variants like \"2008W32\" (week number) and
   (cond
    ;; Just a year: [-+]YYYY.
    ((iso8601--match iso8601--year-match string)
-    (let ((year (string-to-number (match-string 2 string)))
-          (sign (match-string 1 string)))
-      (iso8601--decoded-time
-       :year (if (string= sign "-")
-                 ;; -0001 is 2 BCE.
-                 (- year 1)
-               year))))
+    (iso8601--decoded-time
+     :year (iso8601--adjust-year (match-string 1 string)
+                                 (match-string 2 string))))
    ;; Calendar dates: YYYY-MM-DD and variants.
    ((iso8601--match iso8601--full-date-match string)
     (iso8601--decoded-time
-     :year (match-string 1 string)
-     :month (match-string 2 string)
-     :day (match-string 3 string)))
+     :year (iso8601--adjust-year (match-string 1 string)
+                                 (match-string 2 string))
+     :month (match-string 3 string)
+     :day (match-string 4 string)))
    ;; Calendar date without day: YYYY-MM.
    ((iso8601--match iso8601--without-day-match string)
     (iso8601--decoded-time
-     :year (match-string 1 string)
-     :month (match-string 2 string)))
+     :year (iso8601--adjust-year (match-string 1 string)
+                                 (match-string 2 string))
+     :month (match-string 3 string)))
    ;; Outdated date without year: --MM-DD
    ((iso8601--match iso8601--outdated-date-match string)
     (iso8601--decoded-time
@@ -143,10 +141,11 @@ well as variants like \"2008W32\" (week number) and
      :day (match-string 2 string)))
    ;; Week dates: YYYY-Www-D
    ((iso8601--match iso8601--week-date-match string)
-    (let* ((year (string-to-number (match-string 1 string)))
-           (week (string-to-number (match-string 2 string)))
-           (day-of-week (and (match-string 3 string)
-                             (string-to-number (match-string 3 string))))
+    (let* ((year (iso8601--adjust-year (match-string 1 string)
+                                       (match-string 2 string)))
+           (week (string-to-number (match-string 3 string)))
+           (day-of-week (and (match-string 4 string)
+                             (string-to-number (match-string 4 string))))
            (jan-start (decoded-time-weekday
                        (decode-time
                         (encode-time
@@ -174,14 +173,25 @@ well as variants like \"2008W32\" (week number) and
                                :day (decoded-time-day month-day)))))
    ;; Ordinal dates: YYYY-DDD
    ((iso8601--match iso8601--ordinal-date-match string)
-    (let* ((year (string-to-number (match-string 1 string)))
-           (ordinal (string-to-number (match-string 2 string)))
+    (let* ((year (iso8601--adjust-year (match-string 1 string)
+                                       (match-string 2 string)))
+           (ordinal (string-to-number (match-string 3 string)))
            (month-day (date-ordinal-to-time year ordinal)))
       (iso8601--decoded-time :year year
                              :month (decoded-time-month month-day)
                              :day (decoded-time-day month-day))))
    (t
     (signal 'wrong-type-argument string))))
+
+(defun iso8601--adjust-year (sign year)
+  (save-match-data
+    (let ((year (if (stringp year)
+                    (string-to-number year)
+                  year)))
+      (if (string= sign "-")
+          ;; -0001 is 2 BCE.
+          (1- (- year))
+        year))))
 
 (defun iso8601-parse-time (string)
   "Parse STRING, which should be an ISO 8601 time string, and return a time value."
