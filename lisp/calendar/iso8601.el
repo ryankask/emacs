@@ -21,6 +21,14 @@
 
 ;;; Commentary:
 
+;; For a publicly available version of the standards document, see:
+
+;; http://www.loc.gov/standards/datetime/iso-tc154-wg5_n0038_iso_wd_8601-1_2016-02-16.pdf
+
+;; The Wikipedia page on the standard is also informative:
+
+;; https://en.wikipedia.org/wiki/ISO_8601
+
 ;;; Code:
 
 (require 'time-date)
