@@ -97,6 +97,13 @@
                    '(12 15 16 9 7 2019 1 t 7200)))
     ))
 
+(ert-deftest test-decoded-add-zone ()
+  (let ((time '(12 15 16 8 7 2019 1 t 7200)))
+    (should (equal (decoded-time-add time (mdec :zone -3600))
+                   '(12 15 15 8 7 2019 1 t 7200)))
+    (should (equal (decoded-time-add time (mdec :zone -7200))
+                   '(12 15 14 8 7 2019 1 t 7200)))))
+
 (require 'ert)
 
 ;;; time-date-tests.el ends here

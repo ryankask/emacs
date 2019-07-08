@@ -421,6 +421,10 @@ changes in daylight saving time are not taken into account."
     (setq seconds (+ (* (or (decoded-time-hour delta) 0) 3600)
                      (* (or (decoded-time-minute delta) 0) 60)
                      (or (decoded-time-second delta) 0)))
+
+    ;; Time zone adjustments are basically the same as time adjustments.
+    (setq seconds (+ seconds (or (decoded-time-zone delta) 0)))
+
     (cond
      ((> seconds 0)
       (decoded-time--alter-second time seconds t))
