@@ -76,6 +76,30 @@
 (defconst iso8601--zone-match
   "\\(Z\\|\\([-+]\\)?\\([0-9][0-9]\\):?\\([0-9][0-9]\\)?\\)")
 
+(defun iso8601-parse (string)
+  "Parse an ISO 8601 date/time string and return a `decoded-time' structure.
+
+The ISO 8601 date/time strings look like \"2008-03-02T13:47:30\",
+but shorter, incomplete strings like \"2008-03-02\" are valid, as
+well as variants like \"2008W32\" (week number) and
+\"2008-234\" (ordinal day number)."
+  (if (not (iso8601-valid-p string))
+      (signal 'wrong-type-argument string)
+    (let* ((date-string (match-string 1 string))
+           (time-string (match-string 2 string))
+           (zone-string (match-string 3 string))
+           (date (iso8601-parse-date date-string)))
+      (when time-string
+        (let ((time (iso8601-parse-time time-string)))
+          (setf (decoded-time-hour date) (decoded-time-hour time))
+          (setf (decoded-time-minute date) (decoded-time-minute time))
+          (setf (decoded-time-second date) (decoded-time-second time))))
+      (when zone-string
+        (setf (decoded-time-zone date)
+              ;; The time zone in decoded times are in seconds.
+              (* (iso8601-parse-zone zone-string) 60)))
+      date)))
+
 (defun iso8601-parse-date (string)
   "Parse STRING (which should be on ISO 8601 format) and return a time value."
   (cond
@@ -193,25 +217,6 @@ Return the number of minutes."
                           "\\(" iso8601--zone-match "\\)?")
                   string))
 
-(defun iso8601-parse (string)
-  "Parse an ISO 8601 date/time string."
-  (if (not (iso8601-valid-p string))
-      (signal 'wrong-type-argument string)
-    (let* ((date-string (match-string 1 string))
-           (time-string (match-string 2 string))
-           (zone-string (match-string 3 string))
-           (date (iso8601-parse-date date-string)))
-      (when time-string
-        (let ((time (iso8601-parse-time time-string)))
-          (setf (decoded-time-hour date) (decoded-time-hour time))
-          (setf (decoded-time-minute date) (decoded-time-minute time))
-          (setf (decoded-time-second date) (decoded-time-second time))))
-      (when zone-string
-        (setf (decoded-time-zone date)
-              ;; The time zone in decoded times are in seconds.
-              (* (iso8601-parse-zone zone-string) 60)))
-      date)))
-
 (defun iso8601-parse-duration (string)
   "Parse ISO 8601 durations on the form P3Y6M4DT12H30M5S."
   (cond
@@ -231,13 +236,16 @@ Return the number of minutes."
       (iso8601--decoded-time :day (* weeks 7))))
    ;; P<date>T<time>
    ((string-match "\\`P[-0-9W]+T[:0-9]+\\'" string)
-    (iso8601-parse (substring string 1)))))
+    (iso8601-parse (substring string 1)))
+   (t
+    (signal 'wrong-type-argument string))))
 
 (defun iso8601-parse-interval (string)
   "Parse ISO 8601 intervals."
   (let ((bits (split-string string "/"))
         start end duration)
-    (when (= (length bits) 2)
+    (if (not (= (length bits) 2))
+        (signal 'wrong-type-argument string)
       (cond
        ((string-match "\\`P" (car bits))
         (setq duration (iso8601-parse-duration (car bits))
