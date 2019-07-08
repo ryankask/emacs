@@ -26,6 +26,13 @@
 (require 'time-date)
 (require 'cl-lib)
 
+(defun iso8601--concat-regexps (regexps)
+  (mapconcat (lambda (regexp)
+               (concat "\\(?:"
+                       (replace-regexp-in-string "(" "(?:" regexp)
+                       "\\)"))
+             regexps "\\|"))
+
 (defconst iso8601--year-match
   "\\([-+]\\)?\\([0-9][0-9][0-9][0-9]\\)")
 (defconst iso8601--full-date-match
@@ -39,23 +46,38 @@
 (defconst iso8601--ordinal-date-match
   "\\([0-9][0-9][0-9][0-9]\\)-?\\([0-9][0-9][0-9]\\)")
 (defconst iso8601--date-match
-  (mapconcat (lambda (regexp)
-               (concat "\\(?:"
-                       (replace-regexp-in-string "(" "(?:" regexp)
-                       "\\)"))
-             (list iso8601--year-match
+  (iso8601--concat-regexps
+   (list iso8601--year-match
                    iso8601--full-date-match
                    iso8601--without-day-match
                    iso8601--outdated-date-match
                    iso8601--week-date-match
-                   iso8601--ordinal-date-match)
-             "\\|"))
+                   iso8601--ordinal-date-match)))
 
 (defconst iso8601--time-match
   "\\([0-9][0-9]\\):?\\([0-9][0-9]\\)?:?\\([0-9][0-9]\\)?\\.?\\([0-9][0-9][0-9]\\)?")
 
 (defconst iso8601--zone-match
   "\\(Z\\|\\([-+]\\)?\\([0-9][0-9]\\):?\\([0-9][0-9]\\)?\\)")
+
+(defconst iso8601--combined-match
+  (concat "\\(" iso8601--date-match "\\)"
+          "\\(?:T\\("
+          (replace-regexp-in-string "(" "(?:" iso8601--time-match)
+          "\\)\\)?"
+          "\\(" iso8601--zone-match "\\)?"))
+
+(defconst iso8601--duration-full-match
+  "P\\([0-9]+Y\\)?\\([0-9]+M\\)?\\([0-9]+D\\)?\\(T\\([0-9]+H\\)?\\([0-9]+M\\)?\\([0-9]+S\\)?\\)?")
+(defconst iso8601--duration-week-match
+  "P\\([0-9]+\\)W")
+(defconst iso8601--duration-combined-match
+  (concat "P" iso8601--combined-match))
+(defconst iso8601--duration-match
+  (iso8601--concat-regexps
+   (list iso8601--duration-full-match
+         iso8601--duration-week-match
+         iso8601--duration-combined-match)))
 
 (defun iso8601-parse (string)
   "Parse an ISO 8601 date/time string and return a `decoded-time' structure.
@@ -189,19 +211,14 @@ Return the number of minutes."
 
 (defun iso8601-valid-p (string)
   "Say whether STRING is a valid ISO 8601 representation."
-  (iso8601--match (concat "\\(" iso8601--date-match "\\)"
-                          "\\(?:T\\("
-                          (replace-regexp-in-string
-                           "(" "(?:" iso8601--time-match)
-                          "\\)\\)?"
-                          "\\(" iso8601--zone-match "\\)?")
-                  string))
+  (iso8601--match iso8601--combined-match string))
 
 (defun iso8601-parse-duration (string)
   "Parse ISO 8601 durations on the form P3Y6M4DT12H30M5S."
   (cond
-   ((and (string-match "\\`P\\([0-9]+Y\\)?\\([0-9]+M\\)?\\([0-9]+D\\)?\\(T\\([0-9]+H\\)?\\([0-9]+M\\)?\\([0-9]+S\\)?\\)?\\'"
-                       string)
+   ((and (iso8601--match iso8601--duration-full-match string)
+         ;; Just a "P" isn't valid; there has to be at least one
+         ;; element, like P1M.
          (> (length (match-string 0 string)) 2))
     (iso8601--decoded-time :year (or (match-string 1 string) 0)
                            :month (or (match-string 2 string) 0)
@@ -210,13 +227,12 @@ Return the number of minutes."
                            :minute (or (match-string 6 string) 0)
                            :second (or (match-string 7 string) 0)))
    ;; PnW: Weeks.
-   ((string-match "\\`P\\([0-9]+\\)W\\'" string)
+   ((iso8601--match iso8601--duration-week-match string)
     (let ((weeks (string-to-number (match-string 1 string))))
       ;; Does this make sense?  Hm...
       (iso8601--decoded-time :day (* weeks 7))))
    ;; P<date>T<time>
-   ((and (string-match "\\`P" string)
-         (iso8601-valid-p (substring string 1)))
+   ((iso8601--match iso8601--duration-combined-match string)
     (iso8601-parse (substring string 1)))
    (t
     (signal 'wrong-type-argument string))))
@@ -228,17 +244,20 @@ Return the number of minutes."
     (if (not (= (length bits) 2))
         (signal 'wrong-type-argument string)
       (cond
-       ((string-match "\\`P" (car bits))
+       ((and (string-match "\\`P" (car bits))
+             (iso8601-valid-p (cadr bits)))
         (setq duration (iso8601-parse-duration (car bits))
-              end (encode-time (iso8601-parse (cadr bits)))
-              start (time-subtract end (encode-time duration))))
-       ((string-match "\\`P" (cadr bits))
+              end (iso8601-parse (cadr bits))))
+       ((and (string-match "\\`P" (cadr bits))
+             (iso8601-valid-p (car bits)))
         (setq duration (iso8601-parse-duration (cadr bits))
-              start (encode-time (iso8601-parse (car bits)))
-              end (time-add start (encode-time duration))))
-       (t
+              start (iso8601-parse (car bits))))
+       ((and (iso8601-valid-p (car bits))
+             (iso8601-valid-p (cadr bits)))
         (setq start (encode-time (iso8601-parse (car bits)))
-              end (encode-time (iso8601-parse (cadr bits)))))))
+              end (encode-time (iso8601-parse (cadr bits)))))
+       (t
+        (signal 'wrong-type-argument string))))
     (list start end)))
 
 (defun iso8601--match (regexp string)

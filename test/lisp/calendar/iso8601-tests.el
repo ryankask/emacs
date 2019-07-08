@@ -84,4 +84,11 @@
   (should (equal (iso8601-parse-duration "P0003-06-04T12:30:05")
                  '(5 30 12 4 6 3 nil nil nil))))
 
+(ert-deftest test-iso8601-invalid ()
+  (should-not (iso8601-valid-p " 2008-03-02T13:47:30-01"))
+  (should-not (iso8601-valid-p "2008-03-02T13:47:30-01:200"))
+  (should-not (iso8601-valid-p "2008-03-02T13:47:30-01 "))
+  (should-not (iso8601-valid-p "2008-03-02 T 13:47:30-01 "))
+  (should-not (iso8601-valid-p "20008-03-02T13:47:30-01")))
+
 ;;; iso8601-tests.el ends here
