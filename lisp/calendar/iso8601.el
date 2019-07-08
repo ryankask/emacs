@@ -243,6 +243,8 @@ Return the number of minutes."
         start end duration)
     (if (not (= (length bits) 2))
         (signal 'wrong-type-argument string)
+      ;; The intervals may be an explicit start/end times, or either a
+      ;; start or an end, and an accompanying duration.
       (cond
        ((and (string-match "\\`P" (car bits))
              (iso8601-valid-p (cadr bits)))
@@ -254,11 +256,23 @@ Return the number of minutes."
               start (iso8601-parse (car bits))))
        ((and (iso8601-valid-p (car bits))
              (iso8601-valid-p (cadr bits)))
-        (setq start (encode-time (iso8601-parse (car bits)))
-              end (encode-time (iso8601-parse (cadr bits)))))
+        (setq start (iso8601-parse (car bits))
+              end (iso8601-parse (cadr bits))))
        (t
         (signal 'wrong-type-argument string))))
-    (list start end)))
+    (unless end
+      (setq end (decode-time (time-add (encode-time start)
+                                       (encode-time duration))
+                             (decoded-time-zone start))))
+    (unless start
+      (setq start (decode-time (time-subtract (encode-time end)
+                                              (encode-time duration))
+                               (decoded-time-zone end))))
+    (list start end
+          (or duration
+              (decode-time (time-subtract (encode-time end)
+                                          (encode-time start))
+                           (decoded-time-zone end))))))
 
 (defun iso8601--match (regexp string)
   (string-match (concat "\\`" regexp "\\'") string))
