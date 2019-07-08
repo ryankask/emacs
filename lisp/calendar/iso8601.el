@@ -293,9 +293,9 @@ Return the number of minutes."
       (string-to-number elem)
     (or elem default)))
 
-(cl-defmethod iso8601--decoded-time (&key second minute hour
-                                          day month year
-                                          dst zone)
+(cl-defun iso8601--decoded-time (&key second minute hour
+                                      day month year
+                                      dst zone)
   (list (iso8601--value second 0)
         (iso8601--value minute 0)
         (iso8601--value hour 0)
