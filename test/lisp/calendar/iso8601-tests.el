@@ -66,7 +66,13 @@
 
 (ert-deftest test-iso8601-combined ()
   (should (equal (iso8601-parse "2008-03-02T13:47:30")
-                 '(30 47 13 2 3 2008 nil nil nil))))
+                 '(30 47 13 2 3 2008 nil nil nil)))
+  (should (equal (iso8601-parse "2008-03-02T13:47:30Z")
+                 '(30 47 13 2 3 2008 nil nil 0)))
+  (should (equal (iso8601-parse "2008-03-02T13:47:30+01:00")
+                 '(30 47 13 2 3 2008 nil nil 3600)))
+  (should (equal (iso8601-parse "2008-03-02T13:47:30-01")
+                 '(30 47 13 2 3 2008 nil nil -3600))))
 
 (ert-deftest test-iso8601-duration ()
   (should (equal (iso8601-parse-duration "P3Y6M4DT12H30M5S")

@@ -174,15 +174,15 @@ well as variants like \"2008W32\" (week number) and
 Return the number of minutes."
   (if (not (iso8601--match iso8601--zone-match string))
       (signal 'wrong-type-argument string)
-    (if (match-string 1 string)
+    (if (match-string 2 string)
         ;; HH:MM-ish.
         (let ((hour (string-to-number (match-string 3 string)))
               (minute (and (match-string 4 string)
-                           (string-to-number (match-string 5 string)))))
-          (+ (* (if (equal (match-string 1 string) "-")
-                    (- hour)
-                  hour)
-                60
+                           (string-to-number (match-string 4 string)))))
+          (* (if (equal (match-string 2 string) "-")
+                 -1
+               1)
+             (+ (* hour 60)
                 (or minute 0))))
       ;; "Z".
       0)))
