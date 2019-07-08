@@ -27,15 +27,20 @@
 
 (require 'time-date)
 
-(cl-defmethod make-decoded-time (&key second minute hour
-                                      day month year
-                                      dst zone)
-  (list (or second 0)
-        (or minute 0)
-        (or hour 0)
-        (or day 1)
-        (or month 1)
-        (or year 0)
+(defun iso8601--value (elem default)
+  (if (stringp elem)
+      (string-to-number elem)
+    (or elem default)))
+
+(cl-defmethod iso8601--decoded-time (&key second minute hour
+                                          day month year
+                                          dst zone)
+  (list (iso8601--value second 0)
+        (iso8601--value minute 0)
+        (iso8601--value hour 0)
+        (iso8601--value day 1)
+        (iso8601--value month 1)
+        (iso8601--value year 0)
         nil
         dst
         zone))
@@ -47,7 +52,7 @@
    ((string-match "\\`\\([-+]\\)?\\([0-9][0-9][0-9][0-9]\\)\\'" string)
     (let ((year (string-to-number (match-string 2 string)))
           (sign (match-string 1 string)))
-      (make-decoded-time
+      (iso8601--decoded-time
        :year (if (string= sign "-")
                  ;; -0001 is 2 BCE.
                  (- year 1)
@@ -55,20 +60,20 @@
    ;; Calendar dates: YYY-MM-DD and variants.
    ((string-match "\\`\\([0-9][0-9][0-9][0-9]\\)-?\\([0-9][0-9]\\)-?\\([0-9][0-9]\\)\\'"
                   string)
-    (make-decoded-time
-     :year (string-to-number (match-string 1 string))
-     :month (string-to-number (match-string 2 string))
-     :day (string-to-number (match-string 3 string))))
+    (iso8601--decoded-time
+     :year (match-string 1 string)
+     :month (match-string 2 string)
+     :day (match-string 3 string)))
    ;; Calendar date without day: YYYY-MM.
    ((string-match "\\`\\([0-9][0-9][0-9][0-9]\\)-\\([0-9][0-9]\\)\\'" string)
-    (make-decoded-time
-     :year (string-to-number (match-string 1 string))
-     :month (string-to-number (match-string 2 string))))
+    (iso8601--decoded-time
+     :year (match-string 1 string)
+     :month (match-string 2 string)))
    ;; Outdated date without year: --MM-DD
    ((string-match "\\`--\\([0-9][0-9]\\)-?\\([0-9][0-9]\\)\\'" string)
-    (make-decoded-time
-     :month (string-to-number (match-string 1 string))
-     :day (string-to-number (match-string 2 string))))
+    (iso8601--decoded-time
+     :month (match-string 1 string)
+     :day (match-string 2 string)))
    ;; Week dates: YYYY-Www-D
    ((string-match "\\`\\([0-9][0-9][0-9][0-9]\\)-?W\\([0-9][0-9]\\)-?\\([0-9]\\)?\\'"
                   string)
@@ -79,9 +84,9 @@
            (jan-start (decoded-time-weekday
                        (decode-time
                         (encode-time
-                         (make-decoded-time :year year
-                                            :month 1
-                                            :day 4)))))
+                         (iso8601--decoded-time :year year
+                                                :month 1
+                                                :day 4)))))
            (correction (+ (if (zerop jan-start) 7 jan-start)
                           3))
            (ordinal (+ (* week 7) (or day-of-week 0) (- correction))))
@@ -98,18 +103,18 @@
                                      366 365))
               year (1+ year))))
       (let ((month-day (date-ordinal-to-time year ordinal)))
-        (make-decoded-time :year year
-                           :month (decoded-time-month month-day)
-                           :day (decoded-time-day month-day)))))
+        (iso8601--decoded-time :year year
+                               :month (decoded-time-month month-day)
+                               :day (decoded-time-day month-day)))))
    ;; Ordinal dates: YYYY-DDD
    ((string-match "\\`\\([0-9][0-9][0-9][0-9]\\)-?\\([0-9][0-9][0-9]\\)\\'"
                   string)
     (let* ((year (string-to-number (match-string 1 string)))
            (ordinal (string-to-number (match-string 2 string)))
            (month-day (date-ordinal-to-time year ordinal)))
-      (make-decoded-time :year year
-                         :month (decoded-time-month month-day)
-                         :day (decoded-time-day month-day))))))
+      (iso8601--decoded-time :year year
+                             :month (decoded-time-month month-day)
+                             :day (decoded-time-day month-day))))))
 
 (defun iso8601-parse-time (string)
   "Parse STRING, which should be an ISO 8601 time string, and return a time value."
@@ -123,9 +128,9 @@
           ;; Hm...
           (_millisecond (and (match-string 4 string)
                              (string-to-number (match-string 4 string)))))
-      (make-decoded-time :hour hour
-                         :minute (or minute 0)
-                         :second (or second 0)))))
+      (iso8601--decoded-time :hour hour
+                             :minute (or minute 0)
+                             :second (or second 0)))))
 
 (defun iso8601-parse-zone (string)
   "Parse STRING, which should be an ISO 8601 time zone.
@@ -168,24 +173,18 @@ Return the number of minutes."
   (cond
    ((string-match "\\`P\\([0-9]+Y\\)?\\([0-9]+M\\)?\\([0-9]+D\\)?\\(T\\([0-9]+H\\)?\\([0-9]+M\\)?\\([0-9]+S\\)?\\)?\\'"
                   string)
-    (let ((year (match-string 1 string))
-          (month (match-string 2 string))
-          (day (match-string 3 string))
-          (hour (match-string 5 string))
-          (minute (match-string 6 string))
-          (second (match-string 7 string)))
-      (when (> (length (match-string 0 string)) 2)
-        (make-decoded-time :year (if year (string-to-number year) 0)
-                           :month (if month (string-to-number month) 0)
-                           :day (if day (string-to-number day) 0)
-                           :hour (if hour (string-to-number hour) 0)
-                           :minute (if minute (string-to-number minute) 0)
-                           :second (if second (string-to-number second) 0)))))
+    (when (> (length (match-string 0 string)) 2)
+      (iso8601--decoded-time :year (or (match-string 1 string) 0)
+                             :month (or (match-string 2 string) 0)
+                             :day (or (match-string 3 string) 0)
+                             :hour (or (match-string 5 string) 0)
+                             :minute (or (match-string 6 string) 0)
+                             :second (or (match-string 7 string) 0))))
    ;; PnW: Weeks.
    ((string-match "\\`P\\([0-9]+\\)W\\'" string)
     (let ((weeks (string-to-number (match-string 1 string))))
       ;; Does this make sense?  Hm...
-      (make-decoded-time :day (* weeks 7))))
+      (iso8601--decoded-time :day (* weeks 7))))
    ;; P<date>T<time>
    ((string-match "\\`P[-0-9W]+T[:0-9]+\\'" string)
     (iso8601-parse (substring string 1)))))
