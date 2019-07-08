@@ -381,12 +381,14 @@ For instance, if you want to \"add two months\" to TIME, then
 leave all other fields but the month field in DELTA nil, and make
 the month field 2.  The values in DELTA can be negative.
 
-If applying the delta leaves the time spec invalid, it is
-decreased to be valid (\"add one month\" to January 31st will
-yield a result of February 28th (or 29th, depending on the leap
-year status).
+If applying a month/year delta leaves the time spec invalid, it
+is decreased to be valid (\"add one month\" to January 31st 2019
+will yield a result of February 28th 2019 and \"add one year\" to
+February 29th 2020 will result in February 28th 2021).
 
-Fields are added in a most to least significant order.
+Fields are added in a most to least significant order, so if the
+adjustment described above happens, it happens before adding
+days, hours, minutes or seconds.
 
 When changing the time bits in TIME (i.e., second/minute/hour),
 changes in daylight saving time are not taken into account."
