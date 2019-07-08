@@ -21,29 +21,10 @@
 
 ;;; Commentary:
 
-;;
-
 ;;; Code:
 
 (require 'time-date)
-
-(defun iso8601--value (elem default)
-  (if (stringp elem)
-      (string-to-number elem)
-    (or elem default)))
-
-(cl-defmethod iso8601--decoded-time (&key second minute hour
-                                          day month year
-                                          dst zone)
-  (list (iso8601--value second 0)
-        (iso8601--value minute 0)
-        (iso8601--value hour 0)
-        (iso8601--value day 1)
-        (iso8601--value month 1)
-        (iso8601--value year 0)
-        nil
-        dst
-        zone))
+(require 'cl-lib)
 
 (defconst iso8601--year-match
   "\\([-+]\\)?\\([0-9][0-9][0-9][0-9]\\)")
@@ -89,11 +70,13 @@ well as variants like \"2008W32\" (week number) and
            (time-string (match-string 2 string))
            (zone-string (match-string 3 string))
            (date (iso8601-parse-date date-string)))
+      ;; The time portion is optional.
       (when time-string
         (let ((time (iso8601-parse-time time-string)))
           (setf (decoded-time-hour date) (decoded-time-hour time))
           (setf (decoded-time-minute date) (decoded-time-minute time))
           (setf (decoded-time-second date) (decoded-time-second time))))
+      ;; The time zone is optional.
       (when zone-string
         (setf (decoded-time-zone date)
               ;; The time zone in decoded times are in seconds.
@@ -204,9 +187,6 @@ Return the number of minutes."
       ;; "Z".
       0)))
 
-(defun iso8601--match (regexp string)
-  (string-match (concat "\\`" regexp "\\'") string))
-
 (defun iso8601-valid-p (string)
   "Say whether STRING is a valid ISO 8601 representation."
   (iso8601--match (concat "\\(" iso8601--date-match "\\)"
@@ -235,7 +215,8 @@ Return the number of minutes."
       ;; Does this make sense?  Hm...
       (iso8601--decoded-time :day (* weeks 7))))
    ;; P<date>T<time>
-   ((string-match "\\`P[-0-9W]+T[:0-9]+\\'" string)
+   ((and (string-match "\\`P" string)
+         (iso8601-valid-p (substring string 1)))
     (iso8601-parse (substring string 1)))
    (t
     (signal 'wrong-type-argument string))))
@@ -259,6 +240,27 @@ Return the number of minutes."
         (setq start (encode-time (iso8601-parse (car bits)))
               end (encode-time (iso8601-parse (cadr bits)))))))
     (list start end)))
+
+(defun iso8601--match (regexp string)
+  (string-match (concat "\\`" regexp "\\'") string))
+
+(defun iso8601--value (elem default)
+  (if (stringp elem)
+      (string-to-number elem)
+    (or elem default)))
+
+(cl-defmethod iso8601--decoded-time (&key second minute hour
+                                          day month year
+                                          dst zone)
+  (list (iso8601--value second 0)
+        (iso8601--value minute 0)
+        (iso8601--value hour 0)
+        (iso8601--value day 1)
+        (iso8601--value month 1)
+        (iso8601--value year 0)
+        nil
+        dst
+        zone))
 
 (provide 'iso8601)
 
