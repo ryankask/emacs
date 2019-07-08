@@ -34,14 +34,68 @@
   (should-not (= (date-days-in-month 1900 3) 28)))
 
 (ert-deftest test-ordinal ()
-  (should (equal (time-ordinal-to-date 2008 271)
+  (should (equal (date-ordinal-to-time 2008 271)
                  '(0 0 0 27 9 2008 nil nil nil)))
-  (should (equal (time-ordinal-to-date 2008 1)
+  (should (equal (date-ordinal-to-time 2008 1)
                  '(0 0 0 1 1 2008 nil nil nil)))
-  (should (equal (time-ordinal-to-date 2008 32)
+  (should (equal (date-ordinal-to-time 2008 32)
                  '(0 0 0 1 2 2008 nil nil nil)))
-  (should (equal (time-ordinal-to-date 1981 095)
+  (should (equal (date-ordinal-to-time 1981 095)
                  '(0 0 0 5 4 1981 nil nil nil))))
+
+(cl-defmethod mdec (&key second minute hour
+                         day month year
+                         dst zone)
+  (list second minute hour day month year nil dst zone))
+
+(ert-deftest test-decoded-add ()
+  (let ((time '(12 15 16 8 7 2019 1 t 7200)))
+    (should (equal (decoded-time-add time (mdec :year 1))
+                   '(12 15 16 8 7 2020 1 t 7200)))
+
+    (should (equal (decoded-time-add time (mdec :year -2))
+                   '(12 15 16 8 7 2017 1 t 7200)))
+
+    (should (equal (decoded-time-add time (mdec :month 1))
+                   '(12 15 16 8 8 2019 1 t 7200)))
+
+    (should (equal (decoded-time-add time (mdec :month 10))
+                   '(12 15 16 8 5 2020 1 t 7200)))
+
+    (should (equal (decoded-time-add time (mdec :day 1))
+                   '(12 15 16 9 7 2019 1 t 7200)))
+
+    (should (equal (decoded-time-add time (mdec :day -1))
+                   '(12 15 16 7 7 2019 1 t 7200)))
+
+    (should (equal (decoded-time-add time (mdec :day 30))
+                   '(12 15 16 7 8 2019 1 t 7200)))
+
+    (should (equal (decoded-time-add time (mdec :day -365))
+                   '(12 15 16 8 7 2018 1 t 7200)))
+
+    (should (equal (decoded-time-add time (mdec :day 365))
+                   '(12 15 16 7 7 2020 1 t 7200)))
+
+    ;; 2020 is a leap year.
+    (should (equal (decoded-time-add time (mdec :day 366))
+                   '(12 15 16 8 7 2020 1 t 7200)))
+
+    (should (equal (decoded-time-add time (mdec :second 1))
+                   '(13 15 16 8 7 2019 1 t 7200)))
+
+    (should (equal (decoded-time-add time (mdec :second -1))
+                   '(11 15 16 8 7 2019 1 t 7200)))
+
+    (should (equal (decoded-time-add time (mdec :second 61))
+                   '(13 16 16 8 7 2019 1 t 7200)))
+
+    (should (equal (decoded-time-add time (mdec :hour 1 :minute 2 :second 3))
+                   '(15 17 17 8 7 2019 1 t 7200)))
+
+    (should (equal (decoded-time-add time (mdec :hour 24))
+                   '(12 15 16 9 7 2019 1 t 7200)))
+    ))
 
 (require 'ert)
 

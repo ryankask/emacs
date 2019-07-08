@@ -36,6 +36,9 @@
 
 ;;; Code:
 
+(require 'cl-lib)
+(require 'subr-x)
+
 (defmacro with-decoded-time-value (varlist &rest body)
   "Decode a time value and bind it according to VARLIST, then eval BODY.
 
@@ -368,6 +371,114 @@ January 1st being 1."
       (setq ordinal (- ordinal (date-days-in-month year month))
             month (1+ month)))
     (list 0 0 0 ordinal month year nil nil nil)))
+
+(defun decoded-time-add (time delta)
+  "Add DELTA to TIME, both of which are `decoded-time' structures.
+TIME should represent a time, while DELTA should only have
+non-nil integers for the values that should be altered.
+
+For instance, if you want to \"add two months\" to TIME, then
+leave all other fields but the month field in DELTA nil, and make
+the month field 2.  The values in DELTA can be negative.
+
+If applying the delta leaves the time spec invalid, it is
+decreased to be valid (\"add one month\" to January 31st will
+yield a result of February 28th (or 29th, depending on the leap
+year status).
+
+Fields are added in a most to least significant order."
+  (let ((time (copy-sequence time))
+        seconds)
+    ;; Years are simple.
+    (when (decoded-time-year delta)
+      (cl-incf (decoded-time-year time) (decoded-time-year delta)))
+
+    ;; Months are pretty simple.
+    (when (decoded-time-month delta)
+      (let ((new (+ (decoded-time-month time) (decoded-time-month delta))))
+        (setf (decoded-time-month time) (mod new 12))
+        (cl-incf (decoded-time-year time) (/ new 12))))
+
+    ;; Adjust for month length.
+    (setf (decoded-time-day time)
+          (min (date-days-in-month (decoded-time-year time)
+                                   (decoded-time-month time))
+               (decoded-time-day time)))
+
+    ;; Days are iterative.
+    (when-let* ((days (decoded-time-day delta)))
+      (let ((increase (> days 0))
+            (days (abs days)))
+        (while (> days 0)
+          (decoded-time--alter-day time increase)
+          (cl-decf days))))
+
+    ;; Do the time part, which is pretty simple (except for leap
+    ;; seconds, I guess).
+    (setq seconds (+ (* (or (decoded-time-hour delta) 0) 3600)
+                     (* (or (decoded-time-minute delta) 0) 60)
+                     (or (decoded-time-second delta) 0)))
+    (cond
+     ((> seconds 0)
+      (decoded-time--alter-second time seconds t))
+     ((< seconds 0)
+      (decoded-time--alter-second time (abs seconds) nil)))
+
+    time))
+
+(defun decoded-time--alter-month (time increase)
+  (if increase
+      (progn
+        (cl-incf (decoded-time-month time))
+        (when (> (decoded-time-month time) 12)
+          (setf (decoded-time-month time) 1)
+          (cl-incf (decoded-time-year time))))
+    (cl-decf (decoded-time-month time))
+    (when (zerop (decoded-time-month time))
+      (setf (decoded-time-month time) 12)
+      (cl-decf (decoded-time-year time)))))
+
+(defun decoded-time--alter-day (time increase)
+  (if increase
+      (progn
+        (cl-incf (decoded-time-day time))
+        (when (> (decoded-time-day time)
+                 (date-days-in-month (decoded-time-year time)
+                                     (decoded-time-month time)))
+          (setf (decoded-time-day time) 1)
+          (decoded-time--alter-month time t)))
+    (cl-decf (decoded-time-day time))
+    (when (zerop (decoded-time-day time))
+      (decoded-time--alter-month time nil)
+      (setf (decoded-time-day time)
+            (date-days-in-month (decoded-time-year time)
+                                (decoded-time-month time))))))
+
+(defun decoded-time--alter-second (time seconds increase)
+  (let ((old (+ (* (or (decoded-time-hour time) 0) 3600)
+                (* (or (decoded-time-minute time) 0) 60)
+                (or (decoded-time-second time) 0))))
+
+    (if increase
+        (progn
+          (setq old (+ old seconds))
+          (setf (decoded-time-second time) (% old 60)
+                (decoded-time-minute time) (% (/ old 60) 60)
+                (decoded-time-hour time) (% (/ old 3600) 24))
+          ;; Hm...  DST...
+          (let ((days (/ old (* 60 60 24))))
+            (while (> days 0)
+              (decoded-time--alter-day time t)
+              (cl-decf days))))
+      (setq old (abs (- old seconds)))
+      (setf (decoded-time-second time) (% old 60)
+            (decoded-time-minute time) (% (/ old 60) 60)
+            (decoded-time-hour time) (% (/ old 3600) 24))
+      ;; Hm...  DST...
+      (let ((days (/ old (* 60 60 24))))
+        (while (> days 0)
+          (decoded-time--alter-day time nil)
+          (cl-decf days))))))
 
 (provide 'time-date)
 
