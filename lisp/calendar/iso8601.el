@@ -45,11 +45,42 @@
         dst
         zone))
 
+(defconst iso8601--year-match
+  "\\([-+]\\)?\\([0-9][0-9][0-9][0-9]\\)")
+(defconst iso8601--full-date-match
+  "\\([0-9][0-9][0-9][0-9]\\)-?\\([0-9][0-9]\\)-?\\([0-9][0-9]\\)")
+(defconst iso8601--without-day-match
+  "\\([0-9][0-9][0-9][0-9]\\)-\\([0-9][0-9]\\)")
+(defconst iso8601--outdated-date-match
+  "--\\([0-9][0-9]\\)-?\\([0-9][0-9]\\)")
+(defconst iso8601--week-date-match
+  "\\([0-9][0-9][0-9][0-9]\\)-?W\\([0-9][0-9]\\)-?\\([0-9]\\)?")
+(defconst iso8601--ordinal-date-match
+  "\\([0-9][0-9][0-9][0-9]\\)-?\\([0-9][0-9][0-9]\\)")
+(defconst iso8601--date-match
+  (mapconcat (lambda (regexp)
+               (concat "\\(?:"
+                       (replace-regexp-in-string "(" "(?:" regexp)
+                       "\\)"))
+             (list iso8601--year-match
+                   iso8601--full-date-match
+                   iso8601--without-day-match
+                   iso8601--outdated-date-match
+                   iso8601--week-date-match
+                   iso8601--ordinal-date-match)
+             "\\|"))
+
+(defconst iso8601--time-match
+  "\\([0-9][0-9]\\):?\\([0-9][0-9]\\)?:?\\([0-9][0-9]\\)?\\.?\\([0-9][0-9][0-9]\\)?")
+
+(defconst iso8601--zone-match
+  "\\(Z\\|\\([-+]\\)?\\([0-9][0-9]\\):?\\([0-9][0-9]\\)?\\)")
+
 (defun iso8601-parse-date (string)
   "Parse STRING (which should be on ISO 8601 format) and return a time value."
   (cond
    ;; Just a year: [-+]YYYY.
-   ((string-match "\\`\\([-+]\\)?\\([0-9][0-9][0-9][0-9]\\)\\'" string)
+   ((iso8601--match iso8601--year-match string)
     (let ((year (string-to-number (match-string 2 string)))
           (sign (match-string 1 string)))
       (iso8601--decoded-time
@@ -57,26 +88,24 @@
                  ;; -0001 is 2 BCE.
                  (- year 1)
                year))))
-   ;; Calendar dates: YYY-MM-DD and variants.
-   ((string-match "\\`\\([0-9][0-9][0-9][0-9]\\)-?\\([0-9][0-9]\\)-?\\([0-9][0-9]\\)\\'"
-                  string)
+   ;; Calendar dates: YYYY-MM-DD and variants.
+   ((iso8601--match iso8601--full-date-match string)
     (iso8601--decoded-time
      :year (match-string 1 string)
      :month (match-string 2 string)
      :day (match-string 3 string)))
    ;; Calendar date without day: YYYY-MM.
-   ((string-match "\\`\\([0-9][0-9][0-9][0-9]\\)-\\([0-9][0-9]\\)\\'" string)
+   ((iso8601--match iso8601--without-day-match string)
     (iso8601--decoded-time
      :year (match-string 1 string)
      :month (match-string 2 string)))
    ;; Outdated date without year: --MM-DD
-   ((string-match "\\`--\\([0-9][0-9]\\)-?\\([0-9][0-9]\\)\\'" string)
+   ((iso8601--match iso8601--outdated-date-match string)
     (iso8601--decoded-time
      :month (match-string 1 string)
      :day (match-string 2 string)))
    ;; Week dates: YYYY-Www-D
-   ((string-match "\\`\\([0-9][0-9][0-9][0-9]\\)-?W\\([0-9][0-9]\\)-?\\([0-9]\\)?\\'"
-                  string)
+   ((iso8601--match iso8601--week-date-match string)
     (let* ((year (string-to-number (match-string 1 string)))
            (week (string-to-number (match-string 2 string)))
            (day-of-week (and (match-string 3 string)
@@ -107,19 +136,20 @@
                                :month (decoded-time-month month-day)
                                :day (decoded-time-day month-day)))))
    ;; Ordinal dates: YYYY-DDD
-   ((string-match "\\`\\([0-9][0-9][0-9][0-9]\\)-?\\([0-9][0-9][0-9]\\)\\'"
-                  string)
+   ((iso8601--match iso8601--ordinal-date-match string)
     (let* ((year (string-to-number (match-string 1 string)))
            (ordinal (string-to-number (match-string 2 string)))
            (month-day (date-ordinal-to-time year ordinal)))
       (iso8601--decoded-time :year year
                              :month (decoded-time-month month-day)
-                             :day (decoded-time-day month-day))))))
+                             :day (decoded-time-day month-day))))
+   (t
+    (signal 'wrong-type-argument string))))
 
 (defun iso8601-parse-time (string)
   "Parse STRING, which should be an ISO 8601 time string, and return a time value."
-  (when (string-match "\\`\\([0-9][0-9]\\):?\\([0-9][0-9]\\)?:?\\([0-9][0-9]\\)?\\.?\\([0-9][0-9][0-9]\\)?\\'"
-                      string)
+  (if (not (iso8601--match iso8601--time-match string))
+      (signal 'wrong-type-argument string)
     (let ((hour (string-to-number (match-string 1 string)))
           (minute (and (match-string 2 string)
                        (string-to-number (match-string 2 string))))
@@ -135,8 +165,8 @@
 (defun iso8601-parse-zone (string)
   "Parse STRING, which should be an ISO 8601 time zone.
 Return the number of minutes."
-  (when (string-match "\\`\\(Z\\|\\([-+]\\)?\\([0-9][0-9]\\):?\\([0-9][0-9]\\)?\\)\\'"
-                      string)
+  (if (not (iso8601--match iso8601--zone-match string))
+      (signal 'wrong-type-argument string)
     (if (match-string 1 string)
         ;; HH:MM-ish.
         (let ((hour (string-to-number (match-string 3 string)))
@@ -150,12 +180,26 @@ Return the number of minutes."
       ;; "Z".
       0)))
 
+(defun iso8601--match (regexp string)
+  (string-match (concat "\\`" regexp "\\'") string))
+
+(defun iso8601-valid-p (string)
+  "Say whether STRING is a valid ISO 8601 representation."
+  (iso8601--match (concat "\\(" iso8601--date-match "\\)"
+                          "\\(?:T\\("
+                          (replace-regexp-in-string
+                           "(" "(?:" iso8601--time-match)
+                          "\\)\\)?"
+                          "\\(" iso8601--zone-match "\\)?")
+                  string))
+
 (defun iso8601-parse (string)
-  "Parse a time string."
-  (when (string-match "\\`\\([^T]+\\)\\(T\\([:0-9]+\\)\\(.+\\)?\\)?\\'" string)
+  "Parse an ISO 8601 date/time string."
+  (if (not (iso8601-valid-p string))
+      (signal 'wrong-type-argument string)
     (let* ((date-string (match-string 1 string))
-           (time-string (match-string 3 string))
-           (zone-string (match-string 4 string))
+           (time-string (match-string 2 string))
+           (zone-string (match-string 3 string))
            (date (iso8601-parse-date date-string)))
       (when time-string
         (let ((time (iso8601-parse-time time-string)))
